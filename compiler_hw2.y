@@ -110,7 +110,31 @@ arithmetic
 ;
 
 boolean
-    : ID true 
+    : initializer GT initializer NEWLINE {
+        if($1 > $3) printf("true\n");
+        else printf("false\n");
+    }
+    | initializer LT initializer NEWLINE {
+        if($1 < $3) printf("true\n");
+        else printf("false\n");
+    }
+    | initializer GE initializer NEWLINE {
+        if($1 >= $3) printf("true\n");
+        else printf("false\n");
+    }
+    | initializer LE initializer NEWLINE {
+        if($1 <= $3) printf("true\n");
+        else printf("false\n");
+    }
+    | initializer EQUAL initializer NEWLINE {
+        if($1 == $3) printf("true\n");
+        else printf("false\n");
+    }
+    | initializer NOTEQ initializer NEWLINE {
+        if($1 != $3) printf("true\n");
+        else printf("false\n");
+    }
+;
 
 print_func
     : print_func {}
@@ -119,6 +143,15 @@ print_func
 initializer
     : I_CONST { $$ = $1; }
     | F_CONST { $$ = $1; }
+    | ID      {
+        int n = lookup_symbol($1, 2);
+        if(n != -1){
+            if(strcmp(table[n].type, "int") == 0)
+                $$ = table[n].int_val;
+            else if(strcmp(table[n].type, "float32") == 0)
+                $$ = table[n].double_val;
+        }
+    }
 ;
 
 type
@@ -157,7 +190,7 @@ void create_symbol() {
 }
 
 void insert_symbol(char id[1000], char type[1000]) {
-    if(lookup_symbol(id)) {
+    if(lookup_symbol(id, 1)) {
         printf("Insert symbol %s\n", id);
         strcpy(table[count].id, id);
         strcpy(table[count].type, type);
@@ -168,13 +201,22 @@ void insert_symbol(char id[1000], char type[1000]) {
     }
 }
 
-int lookup_symbol(char id[1000]) {
+int lookup_symbol(char id[1000], int mode) {
     int i;
-    for(i = 0; i < count; i++) {
-        if(strcmp(table[i].id, id) == 0 && table[i].scope == current_scope)
-            return 0;
+    if(mode == 1) {
+        for(i = 0; i < count; i++) {
+            if(strcmp(table[i].id, id) == 0 && table[i].scope == current_scope)
+                return 0;
+        }
+        return 1;
     }
-    return 1;
+    else if(mode == 2){
+        for(i = 0; i < count; i++) {
+            if(strcmp(table[i].id, id) == 0)
+                return i;
+        }
+        return -1;
+    }
 }
 
 void dump_symbol() {}
