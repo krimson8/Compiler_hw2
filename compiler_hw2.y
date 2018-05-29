@@ -2,6 +2,7 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 extern int yylineno;
 extern int yylex();
 
@@ -15,13 +16,15 @@ void yyerror (char *s);
 
 int count = 0;
 struct symbol{
-    
+    char type[100];
     int int_val;
     double double_val;
     
-    char id;
+    char id[2];
     int scope;
 } table[1000];
+
+int current_scope = 1;
 
 %}
 
@@ -29,14 +32,13 @@ struct symbol{
 %union {
     int i_val;
     double f_val;
-    char* string;
+    char string[1000];
 }
 
 /* Token without return */
 %token PRINT PRINTLN 
 %token IF ELSE FOR
 %token VAR NEWLINE
-%token INT FLOAT VOID
 %token ADD SUB MUL DIV MOD INC DEC 
 %token GT LT GE LE EQUAL NOTEQ
 %token AS INCAS DECAS MULAS DIVAS MODAS
@@ -48,10 +50,14 @@ struct symbol{
 %token <f_val> F_CONST
 %token <string> STRING
 %token <string> ID
+%token <string> INT
+%token <string> FLOAT
+%token <string> VOID
 
 /* Nonterminal with return, which need to sepcify type */
 %type <f_val> stat
-%type <i_val> initializer
+%type <f_val> initializer
+%type <string> type
 
 /* Yacc will start at this nonterminal */
 %start program
@@ -73,12 +79,21 @@ stat
 
 declaration
     : VAR ID type AS initializer NEWLINE   {
-        printf("sohai GG\n");
-        table[count].int_val = $5;
-        table[count].id = $2;
+        insert_symbol($2, $3);
+        if(strcmp($3, "int") == 0) 
+            table[count].int_val = $5;
+        else if(strcmp($3, "float32") == 0) 
+            table[count].double_val = $5;
         count++;
     }
-    | VAR ID type NEWLINE                   {}
+    | VAR ID type NEWLINE                   {
+        insert_symbol($2, $3);
+        if(strcmp($3, "int") == 0) 
+            table[count].int_val = 0;
+        else if(strcmp($3, "float32") == 0) 
+            table[count].double_val = 0.0;
+        count++;
+    }
 ;
 
 compound_stat
@@ -86,22 +101,30 @@ compound_stat
 ;
 
 expression_stat
-    : expression_stat{}
+    : arithmetic    {}
+    | boolean       {}
 ;
+
+arithmetic
+    : print_func    {}
+;
+
+boolean
+    : ID true 
 
 print_func
     : print_func {}
 ;
 
 initializer
-    : I_CONST { $$ = (double)$1; }
+    : I_CONST { $$ = $1; }
     | F_CONST { $$ = $1; }
 ;
 
 type
-    : INT {} 
-    | FLOAT {}
-    | VOID {}
+    : INT 
+    | FLOAT 
+    | VOID 
 ;
 
 %%
@@ -113,10 +136,15 @@ int main(int argc, char** argv)
     
     yyparse();
     
+    printf("Total lines: %d\n", yylineno);
+    printf("The symbol table:\nID\ttype\tData\n");
     if(count != 0) {
         int i = 0;
         for(i = 0; i < count; i++) {
-            printf("%c: %d\n", table[i].id, table[i].int_val);
+            if(strcmp(table[i].type, "int") == 0)
+                printf("%s\t%s\t%d\n", table[i].id, table[i].type, table[i].int_val);
+            else if(strcmp(table[i].type, "float32") == 0)
+                printf("%s\t%s\t%lf\n", table[i].id, table[i].type, table[i].double_val);
         }
     }
     return 0;
@@ -127,7 +155,27 @@ void create_symbol() {
         printf("Creating symbol table\n");
     }
 }
-void insert_symbol() {}
-int lookup_symbol() {}
+
+void insert_symbol(char id[1000], char type[1000]) {
+    if(lookup_symbol(id)) {
+        printf("Insert symbol %s\n", id);
+        strcpy(table[count].id, id);
+        strcpy(table[count].type, type);
+        table[count].scope = current_scope;
+    }
+    else {
+        printf("<ERROR> re-declaration for variable %s(line %d)\n", id, yylineno);
+    }
+}
+
+int lookup_symbol(char id[1000]) {
+    int i;
+    for(i = 0; i < count; i++) {
+        if(strcmp(table[i].id, id) == 0 && table[i].scope == current_scope)
+            return 0;
+    }
+    return 1;
+}
+
 void dump_symbol() {}
 void yyerror (char *s) {fprintf (stderr, "%s\n", s);} 

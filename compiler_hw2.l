@@ -65,10 +65,10 @@ id			{letter}+({letter}|{digit})*
 "for"		{ return FOR; }
 
  /* Declaration Keywords */
-"var"		{ return VAR; }
-"void"		{ return VOID; }
-"int"		{ return INT; }
-"float32"	{ return FLOAT; }
+"var"		{ strcpy(yylval.string, yytext); return VAR; }
+"void"		{ strcpy(yylval.string, yytext); return VOID; }
+"int"		{ strcpy(yylval.string, yytext); return INT; }
+"float32"	{ strcpy(yylval.string, yytext); return FLOAT; }
 
  /* String Constant */
 \"				        { BEGIN STRING_STATE;}
@@ -90,14 +90,14 @@ id			{letter}+({letter}|{digit})*
 \/\/.*	{ }
 
  /* Variable ID */
- {id}       { return ID; }
+ {id}       { strcpy(yylval.string, yytext); return ID; }
 
  /* others */
 
 [\n]		{ return NEWLINE; }
 [ \t]		{ } /* Ignore */
 [^; \t] 	{ } /* Ignore other charactor sets */
-<<EOF>>     { }
+<<EOF>>     { return 0; }
 
 %%
 
