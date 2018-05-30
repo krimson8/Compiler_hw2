@@ -7,11 +7,11 @@ extern int yylineno;
 extern int yylex();
 
 /* Symbol table function - you can add new function if need. */
-int lookup_symbol();
+int lookup_symbol(char id[1000], int mode);
 void create_symbol();
-void insert_symbol();
+int insert_symbol(char id[1000], char type[1000]);
 void dump_symbol();
-
+void assign(char id[1000], int mode, double value);
 void yyerror (char *s);
 
 int count = 0;
@@ -39,11 +39,15 @@ int current_scope = 1;
 %token PRINT PRINTLN 
 %token IF ELSE FOR
 %token VAR NEWLINE
-%token ADD SUB MUL DIV MOD INC DEC 
 %token GT LT GE LE EQUAL NOTEQ
 %token AS INCAS DECAS MULAS DIVAS MODAS
 %token AND OR NOT
 %token LB RB LGB RGB
+
+/* Token with precedence */
+%left ADD SUB 
+%left MUL DIV MOD 
+%left INC DEC 
 
 /* Token with return, which need to sepcify type */
 %token <i_val> I_CONST
@@ -57,6 +61,7 @@ int current_scope = 1;
 /* Nonterminal with return, which need to sepcify type */
 %type <f_val> stat
 %type <f_val> initializer
+%type <f_val> expression_stat
 %type <string> type
 
 /* Yacc will start at this nonterminal */
@@ -80,58 +85,113 @@ stat
 ;
 
 declaration
-    : VAR ID type AS initializer NEWLINE   {
-        insert_symbol($2, $3);
-        if(strcmp($3, "int") == 0) 
-            table[count].int_val = $5;
-        else if(strcmp($3, "float32") == 0) 
-            table[count].double_val = $5;
-        count++;
+    : VAR ID type AS expression_stat    {
+        if(insert_symbol($2, $3)) {
+            count++;
+            assign($2, 1, $5);
+        }
     }
-    | VAR ID type NEWLINE                   {
-        insert_symbol($2, $3);
-        if(strcmp($3, "int") == 0) 
-            table[count].int_val = 0;
-        else if(strcmp($3, "float32") == 0) 
-            table[count].double_val = 0.0;
-        count++;
+    | VAR ID type                   {
+        if(insert_symbol($2, $3)) {
+            count++;
+            assign($2, 1, 0);
+        }
     }
 ;
 
 compound_stat
-    : compound_stat {}
+    : ID AS expression_stat     { 
+        printf("ASSIGN\n");
+        assign($1, 1, $3); 
+    }
+    | ID INCAS expression_stat  { 
+        printf("INCREMENT ASSIGN\n");
+        assign($1, 2, $3); 
+    }
+    | ID DECAS expression_stat  { 
+        printf("DECREMENT ASSIGN\n");
+        assign($1, 3, $3); 
+    }
+    | ID MULAS expression_stat  { 
+        printf("MULTIPLY ASSIGN\n");
+        assign($1, 4, $3); 
+    }
+    | ID DIVAS expression_stat  { 
+        printf("DIVIDE ASSIGN\n");
+        assign($1, 5, $3); 
+    }
+    | ID MODAS expression_stat  { 
+        printf("MODULO ASSIGN\n");
+        assign($1, 6, $3); 
+    }
 ;
 
 expression_stat
-    : arithmetic    {}
-;
+    : expression_stat expression_stat        {} 
+    | LB expression_stat RB             {$$ = $2;}
+    | initializer
+    | ID INC    { 
+        printf("INC\n"); 
+        assign($1, 7, 0); 
+    }
+    | ID DEC    { 
+        printf("DEC\n"); 
+        assign($1, 8, 0); 
+    }
+    | expression_stat MUL expression_stat   { 
+        printf("MUL\n"); 
+        $$ = $1 * $3; 
+        printf("%lf\n", $$);
+    }
+    | expression_stat DIV expression_stat   { 
+        printf("DIV\n"); 
+        $$ = $1 / $3; 
+        printf("%lf\n", $$);
+    }
+    | expression_stat MOD expression_stat   { 
+        printf("MOD\n"); 
+        int x = $1;
+        int y = $3;
+        if(x == $1 || y == $3){
+            $$ = x % y; 
 
-arithmetic
-    : print_func    {}
+            printf("%lf\n", $$);
+        }
+    }
+    | expression_stat ADD expression_stat   { 
+        printf("ADD\n"); 
+        $$ = $1 + $3; 
+        printf("%lf\n", $$);
+    }
+    | expression_stat SUB expression_stat   {
+        printf("SUB\n"); 
+        $$ = $1 - $3; 
+        printf("%lf\n", $$);
+    }
 ;
 
 relation
-    : initializer GT initializer NEWLINE {
+    : expression_stat GT expression_stat {
         if($1 > $3) printf("true\n");
         else printf("false\n");
     }
-    | initializer LT initializer NEWLINE {
+    | expression_stat LT expression_stat {
         if($1 < $3) printf("true\n");
         else printf("false\n");
     }
-    | initializer GE initializer NEWLINE {
+    | expression_stat GE expression_stat {
         if($1 >= $3) printf("true\n");
         else printf("false\n");
     }
-    | initializer LE initializer NEWLINE {
+    | expression_stat LE expression_stat {
         if($1 <= $3) printf("true\n");
         else printf("false\n");
     }
-    | initializer EQUAL initializer NEWLINE {
+    | expression_stat EQUAL expression_stat {
         if($1 == $3) printf("true\n");
         else printf("false\n");
     }
-    | initializer NOTEQ initializer NEWLINE {
+    | expression_stat NOTEQ expression_stat {
         if($1 != $3) printf("true\n");
         else printf("false\n");
     }
@@ -151,6 +211,9 @@ initializer
                 $$ = table[n].int_val;
             else if(strcmp(table[n].type, "float32") == 0)
                 $$ = table[n].double_val;
+        }
+        else if(n == -1) {
+            printf("Undefined variable %s\n", $1);
         }
     }
 ;
@@ -184,21 +247,58 @@ int main(int argc, char** argv)
     return 0;
 }
 
+void assign(char id[1000], int mode, double value) {
+    int n = lookup_symbol(id, 2);
+    if(n != -1){
+        if(strcmp(table[n].type, "int") == 0){
+            if(mode == 1) table[n].int_val = value;
+            else if(mode == 2) table[n].int_val += value;
+            else if(mode == 3) table[n].int_val -= value;
+            else if(mode == 4) table[n].int_val *= value;
+            else if(mode == 5) table[n].int_val /= value;
+            else if(mode == 6) {
+                int x = value;
+                if(x == value)
+                    table[n].int_val = value;
+            }
+            else if(mode == 7) table[n].int_val++;
+            else if(mode == 8) table[n].int_val--;
+            printf("%s = %d\n", table[n].id, table[n].int_val);
+        }
+        else if(strcmp(table[n].type, "float32") == 0){
+            if(mode == 1) table[n].double_val = value;
+            else if(mode == 2) table[n].double_val += value;
+            else if(mode == 3) table[n].double_val -= value;
+            else if(mode == 4) table[n].double_val *= value;
+            else if(mode == 5) table[n].double_val /= value;
+            else if(mode == 7) table[n].double_val ++;
+            else if(mode == 8) table[n].double_val --;
+            // else if(mode == 6) table[n].double_val = value;
+            printf("%s = %lf\n", table[n].id, table[n].double_val);
+        }
+    }
+    else if(n == -1) {
+        printf("Undefined variable %s\n", id);
+    }
+}
+
 void create_symbol() {
     if(count == 0) {
         printf("Creating symbol table\n");
     }
 }
 
-void insert_symbol(char id[1000], char type[1000]) {
+int insert_symbol(char id[1000], char type[1000]) {
     if(lookup_symbol(id, 1)) {
         printf("Insert symbol %s\n", id);
         strcpy(table[count].id, id);
         strcpy(table[count].type, type);
         table[count].scope = current_scope;
+        return 1;
     }
     else {
         printf("<ERROR> re-declaration for variable %s(line %d)\n", id, yylineno);
+        return 0;
     }
 }
 
