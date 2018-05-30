@@ -75,6 +75,8 @@ stat
     | compound_stat     {}
     | expression_stat   {}
     | print_func        {}
+    | relation          {}
+    | NEWLINE           {}
 ;
 
 declaration
@@ -102,14 +104,13 @@ compound_stat
 
 expression_stat
     : arithmetic    {}
-    | boolean       {}
 ;
 
 arithmetic
     : print_func    {}
 ;
 
-boolean
+relation
     : initializer GT initializer NEWLINE {
         if($1 > $3) printf("true\n");
         else printf("false\n");
