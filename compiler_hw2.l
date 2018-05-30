@@ -73,7 +73,7 @@ id			{letter}+({letter}|{digit})*
  /* String Constant */
 \"				        { BEGIN STRING_STATE;}
 <STRING_STATE>\"		{ BEGIN INITIAL;}
-<STRING_STATE>[^"]*		{ }
+<STRING_STATE>[^"]*		{ strcpy(yylval.string, yytext); return STRING; }
 
  /* Number Constant */
 {integer}	{ yylval.i_val = atoi(yytext); return I_CONST; }

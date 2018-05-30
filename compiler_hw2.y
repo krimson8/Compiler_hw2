@@ -15,6 +15,7 @@ void assign(char id[1000], int mode, double value);
 void yyerror (char *s);
 
 int count = 0;
+int float_flag = 0;
 struct symbol{
     char type[100];
     int int_val;
@@ -81,7 +82,7 @@ stat
     | expression_stat   {}
     | print_func        {}
     | relation          {}
-    | NEWLINE           {}
+    | NEWLINE           { float_flag = 0; }
 ;
 
 declaration
@@ -128,6 +129,28 @@ compound_stat
 
 expression_stat
     : expression_stat expression_stat        {} 
+    | PRINT LB expression_stat RB {
+        if(float_flag == 0) {
+            printf("%d", (int)$3);
+        }
+        else {
+            printf("%lf", $3);
+        }
+    }
+    | PRINTLN LB expression_stat RB {
+        if(float_flag == 0) {
+            printf("%d\n", (int)$3);
+        }
+        else {
+            printf("%lf\n", $3);
+        }
+    }
+    | PRINT LB STRING RB {
+        printf("%s", $3);
+    }
+    | PRINTLN LB STRING RB {
+        printf("%s\n", $3);
+    }
     | LB expression_stat RB             {$$ = $2;}
     | initializer
     | ID INC    { 
@@ -144,8 +167,11 @@ expression_stat
         printf("%lf\n", $$);
     }
     | expression_stat DIV expression_stat   { 
-        printf("DIV\n"); 
-        $$ = $1 / $3; 
+        printf("DIV\n");
+        if($3 == 0) {
+            printf("<ERROR> Divide by zero (line %d)\n", yylineno);
+        } else 
+            $$ = $1 / $3; 
         printf("%lf\n", $$);
     }
     | expression_stat MOD expression_stat   { 
@@ -203,7 +229,7 @@ print_func
 
 initializer
     : I_CONST { $$ = $1; }
-    | F_CONST { $$ = $1; }
+    | F_CONST { $$ = $1; float_flag = 1;}
     | ID      {
         int n = lookup_symbol($1, 2);
         if(n != -1){
@@ -213,7 +239,7 @@ initializer
                 $$ = table[n].double_val;
         }
         else if(n == -1) {
-            printf("Undefined variable %s\n", $1);
+            printf("<ERROR>Undefined variable %s\n", $1);
         }
     }
 ;
@@ -278,7 +304,7 @@ void assign(char id[1000], int mode, double value) {
         }
     }
     else if(n == -1) {
-        printf("Undefined variable %s\n", id);
+        printf("<ERROR>Undefined variable %s (line %d)\n", id, yylineno);
     }
 }
 
