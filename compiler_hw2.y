@@ -79,7 +79,6 @@ program
 stat
     : declaration       { create_symbol(); }
     | compound_stat     {}
-    | expression_stat   {}
     | print_func        {}
     | relation          {}
     | NEWLINE           { float_flag = 0; }
@@ -129,28 +128,6 @@ compound_stat
 
 expression_stat
     : expression_stat expression_stat        {} 
-    | PRINT LB expression_stat RB {
-        if(float_flag == 0) {
-            printf("%d", (int)$3);
-        }
-        else {
-            printf("%lf", $3);
-        }
-    }
-    | PRINTLN LB expression_stat RB {
-        if(float_flag == 0) {
-            printf("%d\n", (int)$3);
-        }
-        else {
-            printf("%lf\n", $3);
-        }
-    }
-    | PRINT LB STRING RB {
-        printf("%s", $3);
-    }
-    | PRINTLN LB STRING RB {
-        printf("%s\n", $3);
-    }
     | LB expression_stat RB             {$$ = $2;}
     | initializer
     | ID INC    { 
@@ -224,7 +201,28 @@ relation
 ;
 
 print_func
-    : print_func {}
+    : PRINT LB expression_stat RB {
+        if(float_flag == 0) {
+            printf("%d", (int)$3);
+        }
+        else {
+            printf("%lf", $3);
+        }
+    }
+    | PRINTLN LB expression_stat RB {
+        if(float_flag == 0) {
+            printf("%d\n", (int)$3);
+        }
+        else {
+            printf("%lf\n", $3);
+        }
+    }
+    | PRINT LB STRING RB {
+        printf("%s", $3);
+    }
+    | PRINTLN LB STRING RB {
+        printf("%s\n", $3);
+    }
 ;
 
 initializer
