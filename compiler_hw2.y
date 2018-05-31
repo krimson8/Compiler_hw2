@@ -79,9 +79,35 @@ program
 stat
     : declaration       { create_symbol(); }
     | compound_stat     {}
+    | expression_stat   {}
     | print_func        {}
     | relation          {}
     | NEWLINE           { float_flag = 0; }
+    | if_stat           {}
+;
+
+block
+    : LGB program RGB    { 
+        printf("new block\n");
+        current_scope++; 
+    }
+;
+
+
+if_stat
+    : IF boolean block  {
+        printf("IF\n");
+    }
+    | IF boolean block ELSE if_stat {
+        printf("IF ELSE_IF\n");
+    }
+    | IF boolean block ELSE block  {
+        printf("IF ELSE\n");
+    }
+;
+
+boolean 
+    : LB relation RB    {} 
 ;
 
 declaration
@@ -196,6 +222,14 @@ relation
     }
     | expression_stat NOTEQ expression_stat {
         if($1 != $3) printf("true\n");
+        else printf("false\n");
+    }
+    | expression_stat AND expression_stat {
+        if($1 && $3) printf("true\n");
+        else printf("false\n");
+    }
+    | expression_stat OR expression_stat {
+        if($1 || $3) printf("true\n");
         else printf("false\n");
     }
 ;

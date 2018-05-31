@@ -5,7 +5,6 @@ var y float32 = 1.3
 // pure int operation
 x = a + 5 * 2
 
-var t int
 // hybrid operation
 y = x + 3.2 * (a - 2.3)
 

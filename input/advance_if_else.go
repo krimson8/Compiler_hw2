@@ -6,6 +6,7 @@
 var x int = 10
 
 if (x < 10) {
+    println("hello")
     x++
 } else if(x == 10) {
     x--
