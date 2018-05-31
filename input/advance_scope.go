@@ -3,10 +3,11 @@
  * Your symbol table needs to record the scope depth.
  */
 var x int = 10
-
+var y int = 5
 {
-	var x int = 5
 	x++
+	var x int = 5
+	x = x + 5
 	println(x)
 }
 

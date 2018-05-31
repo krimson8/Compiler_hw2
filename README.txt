@@ -7,6 +7,7 @@ The advanced feature implemented as required:
 The grammar to build the tree for 'if else' statement can
 be found in the compiler_hw2.y file as shown below:
 
+****
 if_stat
     : IF boolean block  {
         // printf("IF\n");
@@ -18,6 +19,7 @@ if_stat
         // printf("IF ELSE\n");
     }
 ;
+****
 
 Using this grammar, one can write 'if else' stament with 0 or more
 occurence of the 'else' block. Further evaluation of the 
@@ -32,6 +34,7 @@ scoping block were created, there is a global variable
 of the scope, and this variable will be manipulated using 
 grammar as follow (LGB = '{', RGB = '}')  :
 
+****
 block
     : left_b program RGB    { 
         dump_symbol();
@@ -42,6 +45,7 @@ block
 left_b
     : LGB   { current_scope++; } // add depth when '{' encountered
 ;
+****
 
 If a variable was created, its scope will be referred to the 
 'current_scope'.
